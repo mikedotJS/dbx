@@ -105,6 +105,7 @@ export async function startMongoContainer(
     `-e MONGO_INITDB_ROOT_USERNAME=${options.rootUsername}`,
     `-e MONGO_INITDB_ROOT_PASSWORD='${options.rootPassword.replace(/'/g, "'\\''")}'`,
     options.imageTag,
+    `--bind_ip_all`,
   ].join(' ');
 
   try {
@@ -149,6 +150,8 @@ export async function startMongoContainer(
 export async function waitForMongoReady(
   sshClient: SSHClient,
   containerName: string,
+  rootUsername: string,
+  rootPassword: string,
   timeout: number = 30000
 ): Promise<void> {
   console.log('Waiting for MongoDB to become ready...');
@@ -172,12 +175,13 @@ export async function waitForMongoReady(
       }
 
       // Try to ping MongoDB
+      const escapedPassword = rootPassword.replace(/'/g, "'\\''");
       const pingResult = await sshClient.exec(
-        `docker exec ${containerName} mongosh --quiet --eval "db.adminCommand('ping')"`,
+        `docker exec ${containerName} mongosh --quiet -u ${rootUsername} -p '${escapedPassword}' --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 })"`,
         10000 // 10 second timeout for each ping attempt
       );
 
-      if (pingResult.exitCode === 0 && pingResult.stdout.includes('"ok"')) {
+      if (pingResult.exitCode === 0 && /ok\s*[:=]\s*1/i.test(pingResult.stdout)) {
         console.log('✓ MongoDB is ready');
         return;
       }

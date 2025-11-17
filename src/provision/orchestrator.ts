@@ -165,7 +165,7 @@ export async function provisionInstance(options: ProvisionOptions): Promise<Prov
     console.log('\nStep 9/11: Waiting for MongoDB to become ready...');
 
     try {
-      await waitForMongoReady(sshClient, containerName);
+      await waitForMongoReady(sshClient, containerName, 'root', credentials.rootPassword);
     } catch (err) {
       throw new ProvisioningError(
         `MongoDB failed to start: ${err instanceof Error ? err.message : String(err)}`,

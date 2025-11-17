@@ -36,7 +36,9 @@ export async function createAppUser(sshClient: SSHClient, options: CreateUserOpt
   console.log(`Creating application user: ${options.appUsername}...`);
 
   // Build connection URI (connecting to admin database as root)
-  const connectionUri = `mongodb://${options.rootUsername}:${options.rootPassword}@localhost:${options.port}/admin`;
+  const encodedRootUser = encodeURIComponent(options.rootUsername);
+  const encodedRootPassword = encodeURIComponent(options.rootPassword);
+  const connectionUri = `mongodb://${encodedRootUser}:${encodedRootPassword}@localhost:${options.port}/admin`;
 
   // Build user creation JavaScript
   const userCreationScript = `
@@ -118,7 +120,9 @@ export async function verifyUserCredentials(
   dbName: string
 ): Promise<boolean> {
   try {
-    const connectionUri = `mongodb://${username}:${password}@localhost:${port}/${dbName}?authSource=admin`;
+    const encodedUser = encodeURIComponent(username);
+    const encodedPassword = encodeURIComponent(password);
+    const connectionUri = `mongodb://${encodedUser}:${encodedPassword}@localhost:${port}/${dbName}?authSource=admin`;
 
     const result = await sshClient.exec(
       `docker exec ${containerName} mongosh '${connectionUri}' --quiet --eval 'db.runCommand({connectionStatus: 1})'`,
