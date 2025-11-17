@@ -1,0 +1,30 @@
+{
+  "name": "@weirdscience/dbx",
+  "version": "0.1.0",
+  "description": "CLI tool for provisioning MongoDB instances on remote VPS infrastructure",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "dbx": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["mongodb", "vps", "docker", "cli", "database"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ssh2": "^1.15.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ssh2": "^1.15.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

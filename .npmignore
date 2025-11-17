@@ -1,0 +1,14 @@
+# Exclude development artifacts and AI helper files from the npm package
+node_modules/
+coverage/
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.claude/
+AGENTS.md
+CLAUDE.md
+openspec/
+.dbx/
