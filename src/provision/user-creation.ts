@@ -34,11 +34,14 @@ export interface CreateUserOptions {
  */
 export async function createAppUser(sshClient: SSHClient, options: CreateUserOptions): Promise<void> {
   console.log(`Creating application user: ${options.appUsername}...`);
+  // Port is used externally for host mapping; we always reach Mongo inside the container on 27017
+  void options.port;
 
   // Build connection URI (connecting to admin database as root)
   const encodedRootUser = encodeURIComponent(options.rootUsername);
   const encodedRootPassword = encodeURIComponent(options.rootPassword);
-  const connectionUri = `mongodb://${encodedRootUser}:${encodedRootPassword}@localhost:${options.port}/admin`;
+  // Connect inside the container on the default Mongo port
+  const connectionUri = `mongodb://${encodedRootUser}:${encodedRootPassword}@localhost:27017/admin`;
 
   // Build user creation JavaScript
   const userCreationScript = `
@@ -119,10 +122,11 @@ export async function verifyUserCredentials(
   password: string,
   dbName: string
 ): Promise<boolean> {
+  void port; // connecting inside container on 27017
   try {
     const encodedUser = encodeURIComponent(username);
     const encodedPassword = encodeURIComponent(password);
-    const connectionUri = `mongodb://${encodedUser}:${encodedPassword}@localhost:${port}/${dbName}?authSource=admin`;
+    const connectionUri = `mongodb://${encodedUser}:${encodedPassword}@localhost:27017/${dbName}?authSource=admin`;
 
     const result = await sshClient.exec(
       `docker exec ${containerName} mongosh '${connectionUri}' --quiet --eval 'db.runCommand({connectionStatus: 1})'`,

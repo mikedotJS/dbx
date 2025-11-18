@@ -14,13 +14,17 @@ import { registerUrlCommand } from './commands/url.js';
 import { registerBackupCommand } from './commands/backup.js';
 import { registerRestoreCommand } from './commands/restore.js';
 import { registerDestroyCommand } from './commands/destroy.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json');
 
 const program = new Command();
 
 program
   .name('dbx')
   .description('CLI tool for provisioning MongoDB instances on remote VPS infrastructure')
-  .version('0.1.0');
+  .version(pkg.version);
 
 // Register commands
 registerInitCommand(program);
