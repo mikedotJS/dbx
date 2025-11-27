@@ -20,11 +20,8 @@ export function buildConnectionURI(
   metadata: InstanceMetadata,
   vpsHost: string
 ): string {
-  // URL-encode the password to handle special characters
-  const encodedPassword = encodeURIComponent(metadata.password);
-
-  // Build the URI
-  const uri = `mongodb://${metadata.username}:${encodedPassword}@${vpsHost}:${metadata.port}/${metadata.dbName}?authSource=admin`;
+  // Build the URI with raw password (not URL-encoded for easy copy-paste)
+  const uri = `mongodb://${metadata.username}:${metadata.password}@${vpsHost}:${metadata.port}/${metadata.dbName}?authSource=admin`;
 
   return uri;
 }
@@ -102,11 +99,8 @@ export function buildPostgresConnectionURI(
   metadata: InstanceMetadata,
   vpsHost: string
 ): string {
-  // URL-encode the password to handle special characters
-  const encodedPassword = encodeURIComponent(metadata.password);
-
-  // Build the URI
-  const uri = `postgresql://${metadata.username}:${encodedPassword}@${vpsHost}:${metadata.port}/${metadata.dbName}`;
+  // Build the URI with raw password (not URL-encoded for easy copy-paste)
+  const uri = `postgresql://${metadata.username}:${metadata.password}@${vpsHost}:${metadata.port}/${metadata.dbName}`;
 
   return uri;
 }

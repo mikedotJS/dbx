@@ -4,13 +4,13 @@
  * Outputs a table of environments known to local state.
  */
 
-import { Command } from 'commander';
-import { access } from 'fs/promises';
-import { join } from 'path';
-import { loadConfig } from '../config/loader.js';
-import { readState } from '../state/manager.js';
-import { ConfigValidationError } from '../config/schema.js';
-import { StateValidationError } from '../state/schema.js';
+import { Command } from "commander";
+import { access } from "fs/promises";
+import { join } from "path";
+import { loadConfig } from "../config/loader.js";
+import { readState } from "../state/manager.js";
+import { ConfigValidationError } from "../config/schema.js";
+import { StateValidationError, getInstanceType } from "../state/schema.js";
 
 type InstanceRow = {
   env: string;
@@ -18,20 +18,22 @@ type InstanceRow = {
   host: string;
   port: number;
   engine: string;
-  status: string;
 };
 
-const ENGINE_NAME = 'mongodb';
-
 function formatTable(rows: InstanceRow[]): string {
-  const headers: Array<keyof InstanceRow> = ['env', 'host', 'port', 'dbName', 'engine', 'status'];
+  const headers: Array<keyof InstanceRow> = [
+    "env",
+    "host",
+    "port",
+    "dbName",
+    "engine",
+  ];
   const headerTitles: Record<keyof InstanceRow, string> = {
-    env: 'ENV',
-    dbName: 'DB NAME',
-    host: 'HOST',
-    port: 'PORT',
-    engine: 'ENGINE',
-    status: 'STATUS',
+    env: "ENV",
+    dbName: "DB NAME",
+    host: "HOST",
+    port: "PORT",
+    engine: "ENGINE",
   };
 
   const widths = headers.map((key) => {
@@ -46,10 +48,10 @@ function formatTable(rows: InstanceRow[]): string {
   const renderRow = (row: Record<string, string>): string =>
     headers
       .map((key, idx) => {
-        const value = row[key] ?? '';
-        return value.padEnd(widths[idx], ' ');
+        const value = row[key] ?? "";
+        return value.padEnd(widths[idx], " ");
       })
-      .join('  ');
+      .join("  ");
 
   const headerRow = renderRow(
     headers.reduce<Record<string, string>>((acc, key) => {
@@ -58,9 +60,7 @@ function formatTable(rows: InstanceRow[]): string {
     }, {})
   );
 
-  const separator = widths
-    .map((w) => '-'.repeat(w))
-    .join('  ');
+  const separator = widths.map((w) => "-".repeat(w)).join("  ");
 
   const dataRows = rows.map((row) =>
     renderRow({
@@ -69,15 +69,14 @@ function formatTable(rows: InstanceRow[]): string {
       port: String(row.port),
       dbName: row.dbName,
       engine: row.engine,
-      status: row.status,
     })
   );
 
-  return [headerRow, separator, ...dataRows].join('\n');
+  return [headerRow, separator, ...dataRows].join("\n");
 }
 
 function parseEnvFromKey(key: string): string {
-  const parts = key.split('/');
+  const parts = key.split("/");
   return parts.length === 2 ? parts[1] : key;
 }
 
@@ -85,11 +84,13 @@ async function runList(): Promise<void> {
   try {
     const config = await loadConfig();
 
-    const statePath = join(process.cwd(), '.dbx', 'state.json');
+    const statePath = join(process.cwd(), ".dbx", "state.json");
     try {
       await access(statePath);
     } catch {
-      console.error('State file not found. Run `dbx init` or `dbx up` to create state.');
+      console.error(
+        "State file not found. Run `dbx init` or `dbx up` to create state."
+      );
       process.exit(1);
     }
 
@@ -97,7 +98,9 @@ async function runList(): Promise<void> {
     const instanceEntries = Object.entries(state.instances);
 
     if (instanceEntries.length === 0) {
-      console.log('No environments found. Run `dbx up` to provision an environment.');
+      console.log(
+        "No environments found. Run `dbx up` to provision an environment."
+      );
       process.exit(0);
     }
 
@@ -106,8 +109,7 @@ async function runList(): Promise<void> {
       dbName: instance.dbName,
       host: config.vps.host,
       port: instance.port,
-      engine: ENGINE_NAME,
-      status: 'unknown',
+      engine: getInstanceType(instance),
     }));
 
     console.log(formatTable(rows));
@@ -119,11 +121,15 @@ async function runList(): Promise<void> {
     }
     if (err instanceof StateValidationError) {
       console.error(`State file is invalid: ${err.message}`);
-      console.error('Fix the state file or reprovision the environment.');
+      console.error("Fix the state file or reprovision the environment.");
       process.exit(1);
     }
 
-    console.error(`Failed to list environments: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `Failed to list environments: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
     process.exit(1);
   }
 }
@@ -135,7 +141,7 @@ async function runList(): Promise<void> {
  */
 export function registerListCommand(program: Command): void {
   program
-    .command('list')
-    .description('List provisioned environments with host, port, and status')
+    .command("list")
+    .description("List provisioned environments with host, port, and status")
     .action(runList);
 }

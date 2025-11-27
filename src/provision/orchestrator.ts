@@ -315,7 +315,8 @@ export async function provisionInstance(
     } catch (err) {
       throw new UserCreationError(
         appUsername,
-        err instanceof Error ? err.message : String(err)
+        err instanceof Error ? err.message : String(err),
+        engine
       );
     }
 

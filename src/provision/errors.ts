@@ -14,7 +14,7 @@ export class ProvisioningError extends Error {
     public readonly timestamp: string = new Date().toISOString()
   ) {
     super(message);
-    this.name = 'ProvisioningError';
+    this.name = "ProvisioningError";
   }
 }
 
@@ -31,8 +31,8 @@ export class VolumeCreationError extends ProvisioningError {
       `  2. Check Docker service: sudo systemctl status docker\n` +
       `  3. Try manually: docker volume create ${volumeName}`;
 
-    super(message, 'volume-creation');
-    this.name = 'VolumeCreationError';
+    super(message, "volume-creation");
+    this.name = "VolumeCreationError";
   }
 }
 
@@ -56,27 +56,42 @@ export class ContainerStartError extends ProvisioningError {
       `  3. Check container logs: docker logs ${containerName}\n` +
       `  4. Remove failed container: docker rm ${containerName}`;
 
-    super(message, 'container-start');
-    this.name = 'ContainerStartError';
+    super(message, "container-start");
+    this.name = "ContainerStartError";
   }
 }
 
 /**
- * MongoDB user creation failed
+ * Database user creation failed
  */
 export class UserCreationError extends ProvisioningError {
-  constructor(username: string, cause: string) {
-    const message =
-      `Failed to create MongoDB user: ${username}\n` +
-      `Cause: ${cause}\n\n` +
-      `Troubleshooting:\n` +
-      `  1. Verify MongoDB is running: docker ps\n` +
-      `  2. Check if root credentials are correct\n` +
-      `  3. Try connecting manually: docker exec <container> mongosh\n` +
-      `  4. Check MongoDB logs: docker logs <container>`;
+  constructor(
+    username: string,
+    cause: string,
+    engine: "mongodb" | "postgresql" = "mongodb"
+  ) {
+    const troubleshooting =
+      engine === "postgresql"
+        ? `Troubleshooting:\n` +
+          `  1. Verify PostgreSQL is running: docker ps\n` +
+          `  2. Check if root credentials are correct\n` +
+          `  3. Try connecting manually: docker exec <container> psql -h localhost -U postgres\n` +
+          `  4. Check PostgreSQL logs: docker logs <container>`
+        : `Troubleshooting:\n` +
+          `  1. Verify MongoDB is running: docker ps\n` +
+          `  2. Check if root credentials are correct\n` +
+          `  3. Try connecting manually: docker exec <container> mongosh\n` +
+          `  4. Check MongoDB logs: docker logs <container>`;
 
-    super(message, 'user-creation');
-    this.name = 'UserCreationError';
+    const message =
+      `Failed to create ${
+        engine === "postgresql" ? "PostgreSQL" : "MongoDB"
+      } user: ${username}\n` +
+      `Cause: ${cause}\n\n` +
+      troubleshooting;
+
+    super(message, "user-creation");
+    this.name = "UserCreationError";
   }
 }
 
@@ -84,12 +99,13 @@ export class UserCreationError extends ProvisioningError {
  * State synchronization failed
  */
 export class StateSyncError extends ProvisioningError {
-  constructor(stateType: 'local' | 'remote', cause: string) {
+  constructor(stateType: "local" | "remote", cause: string) {
     const message =
       `Failed to update ${stateType} state file\n` +
-      `Cause: ${cause}\n\n` +
-      `Troubleshooting:\n` +
-      stateType === 'local'
+        `Cause: ${cause}\n\n` +
+        `Troubleshooting:\n` +
+        stateType ===
+      "local"
         ? `  1. Check local disk space: df -h\n` +
           `  2. Check .dbx/ directory permissions\n` +
           `  3. Verify you have write access to current directory`
@@ -99,7 +115,7 @@ export class StateSyncError extends ProvisioningError {
           `  4. Verify write permissions on VPS`;
 
     super(message, `${stateType}-state-sync`);
-    this.name = 'StateSyncError';
+    this.name = "StateSyncError";
   }
 }
 
@@ -107,13 +123,17 @@ export class StateSyncError extends ProvisioningError {
  * Instance already exists
  */
 export class InstanceExistsError extends ProvisioningError {
-  constructor(project: string, env: string, public readonly connectionURI: string) {
+  constructor(
+    project: string,
+    env: string,
+    public readonly connectionURI: string
+  ) {
     const message =
       `Instance already exists: ${project}/${env}\n\n` +
       `Connection URI:\n${connectionURI}\n\n` +
       `To destroy and recreate: dbx destroy ${env}`;
 
-    super(message, 'instance-check');
-    this.name = 'InstanceExistsError';
+    super(message, "instance-check");
+    this.name = "InstanceExistsError";
   }
 }
