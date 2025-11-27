@@ -7,10 +7,11 @@
 import { randomBytes } from "crypto";
 
 /**
- * Character set for password generation (excludes ambiguous characters)
+ * Character set for password generation
+ * Excludes ambiguous characters and URI-problematic characters (@, /, :, ?)
  */
 const PASSWORD_CHARSET =
-  "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*";
+  "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!#$%^&*-_=+";
 
 /**
  * Minimum password length
