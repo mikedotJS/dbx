@@ -1,17 +1,17 @@
 /**
  * DBX up command
  *
- * Provisions a MongoDB instance on the VPS.
+ * Provisions a database instance (MongoDB or PostgreSQL) on the VPS.
  */
 
-import { Command } from 'commander';
-import { provisionInstance } from '../provision/orchestrator.js';
-import { loadConfig } from '../config/loader.js';
-import { ProvisioningError, InstanceExistsError } from '../provision/errors.js';
-import { ConfigValidationError } from '../config/schema.js';
-import { StateValidationError } from '../state/schema.js';
-import { SSHError } from '../ssh/errors.js';
-import { DockerError } from '../ssh/errors.js';
+import { Command } from "commander";
+import { provisionInstance } from "../provision/orchestrator.js";
+import { loadConfig } from "../config/loader.js";
+import { ProvisioningError, InstanceExistsError } from "../provision/errors.js";
+import { ConfigValidationError } from "../config/schema.js";
+import { StateValidationError } from "../state/schema.js";
+import { SSHError } from "../ssh/errors.js";
+import { DockerError } from "../ssh/errors.js";
 
 /**
  * Registers the `up` command with Commander
@@ -20,9 +20,9 @@ import { DockerError } from '../ssh/errors.js';
  */
 export function registerUpCommand(program: Command): void {
   program
-    .command('up [environment]')
-    .description('Provision a MongoDB instance')
-    .option('-q, --quiet', 'Suppress progress output')
+    .command("up [environment]")
+    .description("Provision a database instance")
+    .option("-q, --quiet", "Suppress progress output")
     .action(async (environment?: string, options?: { quiet?: boolean }) => {
       try {
         // Determine environment
@@ -86,7 +86,11 @@ export function registerUpCommand(program: Command): void {
         }
 
         // Unknown error
-        console.error(`\n❌ Unexpected Error:\n${err instanceof Error ? err.message : String(err)}\n`);
+        console.error(
+          `\n❌ Unexpected Error:\n${
+            err instanceof Error ? err.message : String(err)
+          }\n`
+        );
         if (err instanceof Error && err.stack) {
           console.error(err.stack);
         }

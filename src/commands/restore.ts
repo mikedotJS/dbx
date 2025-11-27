@@ -1,18 +1,18 @@
 /**
  * DBX restore command
  *
- * Restores a MongoDB backup to a provisioned instance.
+ * Restores a database backup to a provisioned instance.
  */
 
-import { Command } from 'commander';
-import { loadConfig } from '../config/loader.js';
-import { getInstance } from '../state/manager.js';
-import { SSHClient } from '../ssh/client.js';
-import { restoreBackup, BackupError } from '../backup/manager.js';
-import { ConfigValidationError } from '../config/schema.js';
-import { StateValidationError } from '../state/schema.js';
-import { SSHError } from '../ssh/errors.js';
-import { expandTilde } from '../config/loader.js';
+import { Command } from "commander";
+import { loadConfig } from "../config/loader.js";
+import { getInstance } from "../state/manager.js";
+import { SSHClient } from "../ssh/client.js";
+import { restoreBackupAuto, BackupError } from "../backup/manager.js";
+import { ConfigValidationError } from "../config/schema.js";
+import { StateValidationError } from "../state/schema.js";
+import { SSHError } from "../ssh/errors.js";
+import { expandTilde } from "../config/loader.js";
 
 /**
  * Registers the `restore` command with Commander
@@ -21,14 +21,14 @@ import { expandTilde } from '../config/loader.js';
  */
 export function registerRestoreCommand(program: Command): void {
   program
-    .command('restore <backup-file> [environment]')
-    .description('Restore a MongoDB backup to an instance')
+    .command("restore <backup-file> [environment]")
+    .description("Restore a database backup to an instance")
     .action(async (backupFile: string, environment?: string) => {
       try {
         // Validate backup file argument
         if (!backupFile) {
-          console.error('\n❌ Backup file argument is required\n');
-          console.error('Usage: dbx restore <backup-file> [environment]\n');
+          console.error("\n❌ Backup file argument is required\n");
+          console.error("Usage: dbx restore <backup-file> [environment]\n");
           process.exit(1);
         }
 
@@ -45,12 +45,16 @@ export function registerRestoreCommand(program: Command): void {
 
         // Check if instance exists
         if (!metadata) {
-          console.error(`\n❌ No instance found for ${config.project}/${env}. Run 'dbx up' to provision one.\n`);
+          console.error(
+            `\n❌ No instance found for ${config.project}/${env}. Run 'dbx up' to provision one.\n`
+          );
           process.exit(1);
         }
 
         // Expand SSH key path
-        const sshKeyPath = expandTilde(config.vps.sshKeyPath || '~/.ssh/id_rsa');
+        const sshKeyPath = expandTilde(
+          config.vps.sshKeyPath || "~/.ssh/id_rsa"
+        );
 
         // Create SSH client
         const sshClient = new SSHClient({
@@ -67,14 +71,16 @@ export function registerRestoreCommand(program: Command): void {
 
         try {
           // Restore backup
-          await restoreBackup({
+          await restoreBackupAuto({
             backupFile,
             metadata,
             sshClient,
           });
 
           // Display success message
-          console.log(`\n✅ Restore completed: ${config.project}/${env} from ${backupFile}\n`);
+          console.log(
+            `\n✅ Restore completed: ${config.project}/${env} from ${backupFile}\n`
+          );
 
           process.exit(0);
         } finally {
@@ -95,7 +101,7 @@ export function registerRestoreCommand(program: Command): void {
 
         if (err instanceof SSHError) {
           console.error(`\n❌ SSH Error:\n${err.message}\n`);
-          console.error('Check VPS connectivity and SSH credentials.\n');
+          console.error("Check VPS connectivity and SSH credentials.\n");
           process.exit(1);
         }
 
@@ -108,7 +114,11 @@ export function registerRestoreCommand(program: Command): void {
         }
 
         // Unknown error
-        console.error(`\n❌ Unexpected Error:\n${err instanceof Error ? err.message : String(err)}\n`);
+        console.error(
+          `\n❌ Unexpected Error:\n${
+            err instanceof Error ? err.message : String(err)
+          }\n`
+        );
         if (err instanceof Error && err.stack) {
           console.error(err.stack);
         }

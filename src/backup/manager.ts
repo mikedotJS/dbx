@@ -1,17 +1,18 @@
 /**
  * Backup management
  *
- * Handles MongoDB backup and restore operations including directory management,
- * filename generation, mongodump execution, and mongorestore execution.
+ * Handles database backup and restore operations including directory management,
+ * filename generation, mongodump/pg_dump execution, and mongorestore/pg_restore execution.
  */
 
-import type { SSHClient } from '../ssh/client.js';
-import type { InstanceMetadata } from '../state/schema.js';
+import type { SSHClient } from "../ssh/client.js";
+import type { InstanceMetadata } from "../state/schema.js";
+import { getInstanceType } from "../state/schema.js";
 
 /**
  * Backup directory path on VPS
  */
-const BACKUP_DIR = '/var/lib/dbx/backups';
+const BACKUP_DIR = "/var/lib/dbx/backups";
 
 /**
  * Backup operation options
@@ -49,7 +50,7 @@ export class BackupError extends Error {
     public readonly details?: string
   ) {
     super(message);
-    this.name = 'BackupError';
+    this.name = "BackupError";
   }
 }
 
@@ -58,7 +59,9 @@ export class BackupError extends Error {
  *
  * @param sshClient - Connected SSH client
  */
-export async function ensureBackupDirectory(sshClient: SSHClient): Promise<void> {
+export async function ensureBackupDirectory(
+  sshClient: SSHClient
+): Promise<void> {
   try {
     // Check if directory exists
     const checkResult = await sshClient.exec(`test -d ${BACKUP_DIR}`);
@@ -78,7 +81,7 @@ export async function ensureBackupDirectory(sshClient: SSHClient): Promise<void>
   } catch (err) {
     throw new BackupError(
       `Failed to create backup directory: ${BACKUP_DIR}`,
-      'directory-creation',
+      "directory-creation",
       err instanceof Error ? err.message : String(err)
     );
   }
@@ -94,16 +97,20 @@ export async function ensureBackupDirectory(sshClient: SSHClient): Promise<void>
  * @param timestamp - ISO 8601 timestamp (defaults to now)
  * @returns Filename without path
  */
-export function generateBackupFilename(project: string, env: string, timestamp?: string): string {
+export function generateBackupFilename(
+  project: string,
+  env: string,
+  timestamp?: string
+): string {
   const ts = timestamp || new Date().toISOString();
 
   // Format: YYYY-MM-DDTHH-mm
   const date = new Date(ts);
   const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
 
   const formattedTime = `${year}-${month}-${day}T${hours}-${minutes}`;
 
@@ -137,7 +144,7 @@ export async function resolveFilenameConflict(
   }
 
   // File exists, try increments
-  const extensionIndex = baseFilename.lastIndexOf('.dump');
+  const extensionIndex = baseFilename.lastIndexOf(".dump");
   const nameWithoutExt = baseFilename.substring(0, extensionIndex);
 
   for (let i = 1; i <= 100; i++) {
@@ -159,9 +166,9 @@ export async function resolveFilenameConflict(
 
   // Couldn't find available filename after 100 attempts
   throw new BackupError(
-    'Too many backup files with the same timestamp',
-    'filename-conflict',
-    'Consider manually cleaning up old backups'
+    "Too many backup files with the same timestamp",
+    "filename-conflict",
+    "Consider manually cleaning up old backups"
   );
 }
 
@@ -189,9 +196,14 @@ export function buildRootConnectionURI(metadata: InstanceMetadata): string {
  * @param filePath - Full path to file
  * @returns File size in bytes
  */
-export async function getFileSize(sshClient: SSHClient, filePath: string): Promise<number> {
+export async function getFileSize(
+  sshClient: SSHClient,
+  filePath: string
+): Promise<number> {
   try {
-    const result = await sshClient.exec(`stat -f%z "${filePath}" 2>/dev/null || stat -c%s "${filePath}"`);
+    const result = await sshClient.exec(
+      `stat -f%z "${filePath}" 2>/dev/null || stat -c%s "${filePath}"`
+    );
 
     if (result.exitCode !== 0) {
       throw new Error(`stat command failed: ${result.stderr}`);
@@ -207,7 +219,7 @@ export async function getFileSize(sshClient: SSHClient, filePath: string): Promi
   } catch (err) {
     throw new BackupError(
       `Failed to get file size: ${filePath}`,
-      'file-size',
+      "file-size",
       err instanceof Error ? err.message : String(err)
     );
   }
@@ -244,7 +256,9 @@ export function formatFileSize(bytes: number): string {
  * @param options - Backup options
  * @returns Backup result with file path, size, and timestamp
  */
-export async function createBackup(options: BackupOptions): Promise<BackupResult> {
+export async function createBackup(
+  options: BackupOptions
+): Promise<BackupResult> {
   const { project, env, metadata, sshClient } = options;
 
   // Capture timestamp at start
@@ -270,45 +284,45 @@ export async function createBackup(options: BackupOptions): Promise<BackupResult
   const mongodumpCmd = `docker exec ${metadata.containerName} mongodump --uri "${uri}" --archive=${filePath}`;
 
   // Execute mongodump with extended timeout (5 minutes for large databases)
-  console.log('Running mongodump...');
+  console.log("Running mongodump...");
 
   try {
     const result = await sshClient.exec(mongodumpCmd, 300000); // 5 minute timeout
 
     if (result.exitCode !== 0) {
       // Check for common errors
-      if (result.stderr.includes('No such container')) {
+      if (result.stderr.includes("No such container")) {
         throw new BackupError(
           `MongoDB container is not running: ${metadata.containerName}`,
-          'container-not-running',
+          "container-not-running",
           "Run 'dbx up' to start the instance"
         );
       }
 
-      if (result.stderr.includes('No space left')) {
+      if (result.stderr.includes("No space left")) {
         throw new BackupError(
-          'Insufficient disk space on VPS',
-          'disk-space',
-          'Consider cleaning up old backups or expanding VPS storage'
+          "Insufficient disk space on VPS",
+          "disk-space",
+          "Consider cleaning up old backups or expanding VPS storage"
         );
       }
 
-      if (result.stderr.includes('Permission denied')) {
+      if (result.stderr.includes("Permission denied")) {
         throw new BackupError(
-          'Permission denied writing backup file',
-          'permissions',
-          'Check directory permissions and SSH user privileges'
+          "Permission denied writing backup file",
+          "permissions",
+          "Check directory permissions and SSH user privileges"
         );
       }
 
       throw new BackupError(
-        'mongodump command failed',
-        'mongodump-execution',
+        "mongodump command failed",
+        "mongodump-execution",
         result.stderr || result.stdout
       );
     }
 
-    console.log('Backup completed, retrieving file size...');
+    console.log("Backup completed, retrieving file size...");
 
     // Get file size
     const fileSize = await getFileSize(sshClient, filePath);
@@ -324,17 +338,17 @@ export async function createBackup(options: BackupOptions): Promise<BackupResult
     }
 
     // Check if it's a timeout error
-    if (err instanceof Error && err.message.includes('timeout')) {
+    if (err instanceof Error && err.message.includes("timeout")) {
       throw new BackupError(
-        'Backup operation timed out',
-        'timeout',
-        'The database may be too large. Consider increasing timeout or checking instance performance.'
+        "Backup operation timed out",
+        "timeout",
+        "The database may be too large. Consider increasing timeout or checking instance performance."
       );
     }
 
     throw new BackupError(
-      'Failed to create backup',
-      'unknown',
+      "Failed to create backup",
+      "unknown",
       err instanceof Error ? err.message : String(err)
     );
   }
@@ -360,7 +374,7 @@ export interface RestoreOptions {
  */
 export function resolveBackupPath(backupFile: string): string {
   // If path starts with /, treat as absolute
-  if (backupFile.startsWith('/')) {
+  if (backupFile.startsWith("/")) {
     return backupFile;
   }
 
@@ -375,15 +389,18 @@ export function resolveBackupPath(backupFile: string): string {
  * @param filePath - Absolute path to backup file
  * @throws BackupError if file doesn't exist
  */
-export async function validateBackupFile(sshClient: SSHClient, filePath: string): Promise<void> {
+export async function validateBackupFile(
+  sshClient: SSHClient,
+  filePath: string
+): Promise<void> {
   try {
     const result = await sshClient.exec(`test -f "${filePath}"`);
 
     if (result.exitCode !== 0) {
       throw new BackupError(
         `Backup file not found: ${filePath}`,
-        'file-not-found',
-        'Check the path or list available backups in /var/lib/dbx/backups/'
+        "file-not-found",
+        "Check the path or list available backups in /var/lib/dbx/backups/"
       );
     }
   } catch (err) {
@@ -393,7 +410,7 @@ export async function validateBackupFile(sshClient: SSHClient, filePath: string)
 
     throw new BackupError(
       `Failed to validate backup file: ${filePath}`,
-      'validation-error',
+      "validation-error",
       err instanceof Error ? err.message : String(err)
     );
   }
@@ -410,7 +427,7 @@ export async function restoreBackup(options: RestoreOptions): Promise<void> {
   // Resolve backup file path
   const filePath = resolveBackupPath(backupFile);
 
-  console.log('Validating backup file...');
+  console.log("Validating backup file...");
 
   // Validate file exists
   await validateBackupFile(sshClient, filePath);
@@ -425,71 +442,311 @@ export async function restoreBackup(options: RestoreOptions): Promise<void> {
   const mongorestoreCmd = `docker exec ${metadata.containerName} mongorestore --uri "${uri}" --archive="${filePath}" --drop`;
 
   // Execute mongorestore with extended timeout (5 minutes for large databases)
-  console.log('Running mongorestore...');
+  console.log("Running mongorestore...");
 
   try {
     const result = await sshClient.exec(mongorestoreCmd, 300000); // 5 minute timeout
 
     if (result.exitCode !== 0) {
       // Check for common errors
-      if (result.stderr.includes('No such container')) {
+      if (result.stderr.includes("No such container")) {
         throw new BackupError(
           `MongoDB container is not running: ${metadata.containerName}`,
-          'container-not-running',
+          "container-not-running",
           "Run 'dbx up' to start the instance"
         );
       }
 
-      if (result.stderr.includes('No space left')) {
+      if (result.stderr.includes("No space left")) {
         throw new BackupError(
-          'Insufficient disk space on VPS',
-          'disk-space',
-          'Consider expanding VPS storage or cleaning up data'
+          "Insufficient disk space on VPS",
+          "disk-space",
+          "Consider expanding VPS storage or cleaning up data"
         );
       }
 
-      if (result.stderr.includes('Permission denied')) {
+      if (result.stderr.includes("Permission denied")) {
         throw new BackupError(
-          'Permission denied reading backup file',
-          'permissions',
-          'Check file permissions and SSH user privileges'
+          "Permission denied reading backup file",
+          "permissions",
+          "Check file permissions and SSH user privileges"
         );
       }
 
-      if (result.stderr.includes('error reading archive') || result.stderr.includes('invalid') || result.stderr.includes('corrupt')) {
+      if (
+        result.stderr.includes("error reading archive") ||
+        result.stderr.includes("invalid") ||
+        result.stderr.includes("corrupt")
+      ) {
         throw new BackupError(
-          'Corrupted or invalid backup file',
-          'corrupted-backup',
-          'Verify the backup file integrity or try a different backup'
+          "Corrupted or invalid backup file",
+          "corrupted-backup",
+          "Verify the backup file integrity or try a different backup"
         );
       }
 
       throw new BackupError(
-        'mongorestore command failed',
-        'mongorestore-execution',
+        "mongorestore command failed",
+        "mongorestore-execution",
         result.stderr || result.stdout
       );
     }
 
-    console.log('Restore completed successfully');
+    console.log("Restore completed successfully");
   } catch (err) {
     if (err instanceof BackupError) {
       throw err;
     }
 
     // Check if it's a timeout error
-    if (err instanceof Error && err.message.includes('timeout')) {
+    if (err instanceof Error && err.message.includes("timeout")) {
       throw new BackupError(
-        'Restore operation timed out',
-        'timeout',
-        'The backup file may be too large. Consider increasing timeout or checking instance performance.'
+        "Restore operation timed out",
+        "timeout",
+        "The backup file may be too large. Consider increasing timeout or checking instance performance."
       );
     }
 
     throw new BackupError(
-      'Failed to restore backup',
-      'unknown',
+      "Failed to restore backup",
+      "unknown",
       err instanceof Error ? err.message : String(err)
     );
   }
+}
+
+/**
+ * Creates a backup of a PostgreSQL instance using pg_dump
+ *
+ * @param options - Backup options
+ * @returns Backup result with file path, size, and timestamp
+ */
+export async function createPostgresBackup(
+  options: BackupOptions
+): Promise<BackupResult> {
+  const { project, env, metadata, sshClient } = options;
+
+  // Capture timestamp at start
+  const timestamp = new Date().toISOString();
+
+  console.log(`Creating PostgreSQL backup for ${project}/${env}...`);
+
+  // Ensure backup directory exists
+  await ensureBackupDirectory(sshClient);
+
+  // Generate filename
+  const baseFilename = generateBackupFilename(project, env, timestamp);
+  const filename = await resolveFilenameConflict(sshClient, baseFilename);
+  const filePath = `${BACKUP_DIR}/${filename}`;
+
+  console.log(`Backup file: ${filePath}`);
+
+  // Construct pg_dump command
+  // Run inside the container using docker exec with PGPASSWORD env var
+  const escapedPassword = metadata.rootPassword.replace(/'/g, "'\\''");
+  const pgDumpCmd = `docker exec -e PGPASSWORD='${escapedPassword}' ${metadata.containerName} pg_dump -U postgres -Fc ${metadata.dbName} > ${filePath}`;
+
+  // Execute pg_dump with extended timeout (5 minutes for large databases)
+  console.log("Running pg_dump...");
+
+  try {
+    const result = await sshClient.exec(pgDumpCmd, 300000); // 5 minute timeout
+
+    if (result.exitCode !== 0) {
+      // Check for common errors
+      if (result.stderr.includes("No such container")) {
+        throw new BackupError(
+          `PostgreSQL container is not running: ${metadata.containerName}`,
+          "container-not-running",
+          "Run 'dbx up' to start the instance"
+        );
+      }
+
+      if (result.stderr.includes("No space left")) {
+        throw new BackupError(
+          "Insufficient disk space on VPS",
+          "disk-space",
+          "Consider cleaning up old backups or expanding VPS storage"
+        );
+      }
+
+      if (result.stderr.includes("Permission denied")) {
+        throw new BackupError(
+          "Permission denied writing backup file",
+          "permissions",
+          "Check directory permissions and SSH user privileges"
+        );
+      }
+
+      throw new BackupError(
+        "pg_dump command failed",
+        "pg_dump-execution",
+        result.stderr || result.stdout
+      );
+    }
+
+    console.log("Backup completed, retrieving file size...");
+
+    // Get file size
+    const fileSize = await getFileSize(sshClient, filePath);
+
+    return {
+      filePath,
+      fileSize,
+      timestamp,
+    };
+  } catch (err) {
+    if (err instanceof BackupError) {
+      throw err;
+    }
+
+    // Check if it's a timeout error
+    if (err instanceof Error && err.message.includes("timeout")) {
+      throw new BackupError(
+        "Backup operation timed out",
+        "timeout",
+        "The database may be too large. Consider increasing timeout or checking instance performance."
+      );
+    }
+
+    throw new BackupError(
+      "Failed to create PostgreSQL backup",
+      "unknown",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+}
+
+/**
+ * Restores a PostgreSQL backup to an instance using pg_restore
+ *
+ * @param options - Restore options
+ */
+export async function restorePostgresBackup(
+  options: RestoreOptions
+): Promise<void> {
+  const { backupFile, metadata, sshClient } = options;
+
+  // Resolve backup file path
+  const filePath = resolveBackupPath(backupFile);
+
+  console.log("Validating backup file...");
+
+  // Validate file exists
+  await validateBackupFile(sshClient, filePath);
+
+  console.log(`Backup file found: ${filePath}`);
+
+  // Construct pg_restore command
+  // Run inside the container using docker exec with PGPASSWORD env var
+  const escapedPassword = metadata.rootPassword.replace(/'/g, "'\\''");
+  const pgRestoreCmd = `cat ${filePath} | docker exec -i -e PGPASSWORD='${escapedPassword}' ${metadata.containerName} pg_restore -U postgres -d ${metadata.dbName} --clean --if-exists`;
+
+  // Execute pg_restore with extended timeout (5 minutes for large databases)
+  console.log("Running pg_restore...");
+
+  try {
+    const result = await sshClient.exec(pgRestoreCmd, 300000); // 5 minute timeout
+
+    // pg_restore returns non-zero for warnings too, so check stderr for actual errors
+    if (result.exitCode !== 0 && !result.stderr.includes("WARNING")) {
+      // Check for common errors
+      if (result.stderr.includes("No such container")) {
+        throw new BackupError(
+          `PostgreSQL container is not running: ${metadata.containerName}`,
+          "container-not-running",
+          "Run 'dbx up' to start the instance"
+        );
+      }
+
+      if (result.stderr.includes("No space left")) {
+        throw new BackupError(
+          "Insufficient disk space on VPS",
+          "disk-space",
+          "Consider expanding VPS storage or cleaning up data"
+        );
+      }
+
+      if (result.stderr.includes("Permission denied")) {
+        throw new BackupError(
+          "Permission denied reading backup file",
+          "permissions",
+          "Check file permissions and SSH user privileges"
+        );
+      }
+
+      if (
+        result.stderr.includes("invalid") ||
+        result.stderr.includes("corrupt")
+      ) {
+        throw new BackupError(
+          "Corrupted or invalid backup file",
+          "corrupted-backup",
+          "Verify the backup file integrity or try a different backup"
+        );
+      }
+
+      throw new BackupError(
+        "pg_restore command failed",
+        "pg_restore-execution",
+        result.stderr || result.stdout
+      );
+    }
+
+    console.log("Restore completed successfully");
+  } catch (err) {
+    if (err instanceof BackupError) {
+      throw err;
+    }
+
+    // Check if it's a timeout error
+    if (err instanceof Error && err.message.includes("timeout")) {
+      throw new BackupError(
+        "Restore operation timed out",
+        "timeout",
+        "The backup file may be too large. Consider increasing timeout or checking instance performance."
+      );
+    }
+
+    throw new BackupError(
+      "Failed to restore PostgreSQL backup",
+      "unknown",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+}
+
+/**
+ * Creates a backup of a database instance (auto-detects engine type)
+ *
+ * @param options - Backup options
+ * @returns Backup result with file path, size, and timestamp
+ */
+export async function createBackupAuto(
+  options: BackupOptions
+): Promise<BackupResult> {
+  const instanceType = getInstanceType(options.metadata);
+
+  if (instanceType === "postgresql") {
+    return createPostgresBackup(options);
+  }
+
+  return createBackup(options);
+}
+
+/**
+ * Restores a backup to a database instance (auto-detects engine type)
+ *
+ * @param options - Restore options
+ */
+export async function restoreBackupAuto(
+  options: RestoreOptions
+): Promise<void> {
+  const instanceType = getInstanceType(options.metadata);
+
+  if (instanceType === "postgresql") {
+    return restorePostgresBackup(options);
+  }
+
+  return restoreBackup(options);
 }

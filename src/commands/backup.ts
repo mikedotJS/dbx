@@ -1,18 +1,22 @@
 /**
  * DBX backup command
  *
- * Creates a MongoDB backup of a provisioned instance.
+ * Creates a database backup of a provisioned instance.
  */
 
-import { Command } from 'commander';
-import { loadConfig } from '../config/loader.js';
-import { getInstance, setInstance } from '../state/manager.js';
-import { SSHClient } from '../ssh/client.js';
-import { createBackup, formatFileSize, BackupError } from '../backup/manager.js';
-import { ConfigValidationError } from '../config/schema.js';
-import { StateValidationError } from '../state/schema.js';
-import { SSHError } from '../ssh/errors.js';
-import { expandTilde } from '../config/loader.js';
+import { Command } from "commander";
+import { loadConfig } from "../config/loader.js";
+import { getInstance, setInstance } from "../state/manager.js";
+import { SSHClient } from "../ssh/client.js";
+import {
+  createBackupAuto,
+  formatFileSize,
+  BackupError,
+} from "../backup/manager.js";
+import { ConfigValidationError } from "../config/schema.js";
+import { StateValidationError } from "../state/schema.js";
+import { SSHError } from "../ssh/errors.js";
+import { expandTilde } from "../config/loader.js";
 
 /**
  * Registers the `backup` command with Commander
@@ -21,8 +25,8 @@ import { expandTilde } from '../config/loader.js';
  */
 export function registerBackupCommand(program: Command): void {
   program
-    .command('backup [environment]')
-    .description('Create a MongoDB backup of an instance')
+    .command("backup [environment]")
+    .description("Create a database backup of an instance")
     .action(async (environment?: string) => {
       try {
         // Load configuration
@@ -38,12 +42,16 @@ export function registerBackupCommand(program: Command): void {
 
         // Check if instance exists
         if (!metadata) {
-          console.error(`\n❌ No instance found for ${config.project}/${env}. Run 'dbx up' to provision one.\n`);
+          console.error(
+            `\n❌ No instance found for ${config.project}/${env}. Run 'dbx up' to provision one.\n`
+          );
           process.exit(1);
         }
 
         // Expand SSH key path
-        const sshKeyPath = expandTilde(config.vps.sshKeyPath || '~/.ssh/id_rsa');
+        const sshKeyPath = expandTilde(
+          config.vps.sshKeyPath || "~/.ssh/id_rsa"
+        );
 
         // Create SSH client
         const sshClient = new SSHClient({
@@ -60,7 +68,7 @@ export function registerBackupCommand(program: Command): void {
 
         try {
           // Create backup
-          const result = await createBackup({
+          const result = await createBackupAuto({
             project: config.project,
             env,
             metadata,
@@ -77,7 +85,9 @@ export function registerBackupCommand(program: Command): void {
 
           // Display success message
           const formattedSize = formatFileSize(result.fileSize);
-          console.log(`\n✅ Backup completed: ${result.filePath} (${formattedSize})\n`);
+          console.log(
+            `\n✅ Backup completed: ${result.filePath} (${formattedSize})\n`
+          );
 
           process.exit(0);
         } finally {
@@ -98,7 +108,7 @@ export function registerBackupCommand(program: Command): void {
 
         if (err instanceof SSHError) {
           console.error(`\n❌ SSH Error:\n${err.message}\n`);
-          console.error('Check VPS connectivity and SSH credentials.\n');
+          console.error("Check VPS connectivity and SSH credentials.\n");
           process.exit(1);
         }
 
@@ -111,7 +121,11 @@ export function registerBackupCommand(program: Command): void {
         }
 
         // Unknown error
-        console.error(`\n❌ Unexpected Error:\n${err instanceof Error ? err.message : String(err)}\n`);
+        console.error(
+          `\n❌ Unexpected Error:\n${
+            err instanceof Error ? err.message : String(err)
+          }\n`
+        );
         if (err instanceof Error && err.stack) {
           console.error(err.stack);
         }

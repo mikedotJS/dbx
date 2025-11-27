@@ -1,18 +1,18 @@
 # dbx
 
-A CLI tool for provisioning MongoDB instances on remote VPS infrastructure via SSH and Docker.
+A CLI tool for provisioning database instances (MongoDB or PostgreSQL) on remote VPS infrastructure via SSH and Docker.
 
 ## Overview
 
-**dbx** automates the deployment and management of MongoDB instances on any VPS. It handles:
+**dbx** automates the deployment and management of database instances on any VPS. It handles:
 
-- Provisioning isolated MongoDB containers with auto-generated credentials
+- Provisioning isolated MongoDB or PostgreSQL containers with auto-generated credentials
 - Multi-environment support (dev, staging, production, etc.)
 - Automatic port allocation to avoid conflicts
 - Backup and restore operations
 - State synchronization between local and remote
 
-No Kubernetes. No cloud lock-in. Just SSH, Docker, and MongoDB.
+No Kubernetes. No cloud lock-in. Just SSH, Docker, and your database.
 
 ## Installation
 
@@ -32,7 +32,7 @@ npm install -g @weirdscience/dbx
 # Initialize a new project
 dbx init
 
-# Provision a MongoDB instance
+# Provision a database instance
 dbx up
 
 # Get the connection URL
@@ -51,7 +51,7 @@ dbx init
 
 ### `dbx up [environment]`
 
-Provisions a MongoDB instance on your VPS.
+Provisions a database instance on your VPS (MongoDB or PostgreSQL based on config).
 
 ```bash
 dbx up           # Uses default environment from config
@@ -78,7 +78,7 @@ staging  192.168.1.100  27019  my-app_stg  mongodb   unknown
 
 ### `dbx url [environment]`
 
-Retrieves the MongoDB connection URI.
+Retrieves the database connection URI.
 
 ```bash
 dbx url                  # Masked password
@@ -86,10 +86,16 @@ dbx url --show-password  # Full URI with password
 dbx url staging          # Specific environment
 ```
 
-Output:
+Output (MongoDB):
 
 ```
 mongodb://my-app_dev:***@192.168.1.100:27018/my-app_dev?authSource=admin
+```
+
+Output (PostgreSQL):
+
+```
+postgresql://dbx_dev:***@192.168.1.100:5433/my-app_dev
 ```
 
 ### `dbx logs [environment]`
@@ -105,7 +111,7 @@ dbx logs --tail 50    # Last 50 lines
 
 ### `dbx backup [environment]`
 
-Creates a MongoDB dump backup on the VPS.
+Creates a database backup on the VPS (uses `mongodump` for MongoDB, `pg_dump` for PostgreSQL).
 
 ```bash
 dbx backup           # Backup default environment
@@ -116,7 +122,7 @@ Backups are stored in `/var/lib/dbx/backups/` on the VPS.
 
 ### `dbx restore <backup-file> [environment]`
 
-Restores a MongoDB backup to an instance.
+Restores a database backup to an instance (uses `mongorestore` for MongoDB, `pg_restore` for PostgreSQL).
 
 ```bash
 dbx restore my-app_dev-2024-01-15T10-30-00.dump
@@ -133,7 +139,7 @@ dbx sync
 
 ### `dbx destroy [environment]`
 
-Destroys a MongoDB instance and removes all associated resources.
+Destroys a database instance and removes all associated resources.
 
 ```bash
 dbx destroy           # Destroy default environment
@@ -146,6 +152,10 @@ Requires confirmation by typing the environment name.
 ## Configuration
 
 ### `dbx.config.json`
+
+Choose either `mongodb` or `postgresql` section (not both):
+
+#### MongoDB Configuration
 
 ```json
 {
@@ -164,16 +174,37 @@ Requires confirmation by typing the environment name.
 }
 ```
 
-| Field              | Description                                   |
-| ------------------ | --------------------------------------------- |
-| `project`          | Project namespace for instances               |
-| `defaultEnv`       | Default environment when not specified        |
-| `vps.host`         | VPS hostname or IP address                    |
-| `vps.user`         | SSH username                                  |
-| `vps.sshKeyPath`   | Path to SSH private key (supports `~`)        |
-| `vps.port`         | SSH port (default: 22)                        |
-| `mongodb.version`  | MongoDB version (e.g., `"7"`, `"6.0"`)        |
-| `mongodb.basePort` | Starting port for instances (auto-increments) |
+#### PostgreSQL Configuration
+
+```json
+{
+  "project": "my-app",
+  "defaultEnv": "dev",
+  "vps": {
+    "host": "192.168.1.100",
+    "user": "ubuntu",
+    "sshKeyPath": "~/.ssh/id_ed25519",
+    "port": 22
+  },
+  "postgresql": {
+    "version": "16",
+    "basePort": 5433
+  }
+}
+```
+
+| Field                 | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| `project`             | Project namespace for instances                |
+| `defaultEnv`          | Default environment when not specified         |
+| `vps.host`            | VPS hostname or IP address                     |
+| `vps.user`            | SSH username                                   |
+| `vps.sshKeyPath`      | Path to SSH private key (supports `~`)         |
+| `vps.port`            | SSH port (default: 22)                         |
+| `mongodb.version`     | MongoDB version (e.g., `"7"`, `"6.0"`)         |
+| `mongodb.basePort`    | Starting port for MongoDB (auto-increments)    |
+| `postgresql.version`  | PostgreSQL version (e.g., `"16"`, `"15.2"`)    |
+| `postgresql.basePort` | Starting port for PostgreSQL (auto-increments) |
 
 ### State Files
 
@@ -185,13 +216,13 @@ State files contain sensitive credentials and are created with `600` permissions
 ## How It Works
 
 1. **SSH Connection** - Connects to your VPS using key-based authentication
-2. **Docker Provisioning** - Creates a MongoDB container with:
+2. **Docker Provisioning** - Creates a database container with:
    - Unique container name: `dbx_<project>_<env>`
    - Dedicated Docker volume for data persistence
    - Auto-allocated port starting from `basePort`
    - Auto-generated secure credentials
 3. **State Management** - Tracks instances locally and remotely for multi-machine workflows
-4. **Backup/Restore** - Uses `mongodump`/`mongorestore` inside containers
+4. **Backup/Restore** - Uses native tools (`mongodump`/`mongorestore` or `pg_dump`/`pg_restore`)
 
 ## Programmatic Usage
 

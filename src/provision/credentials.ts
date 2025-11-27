@@ -4,12 +4,13 @@
  * Generates cryptographically secure passwords for root and application users.
  */
 
-import { randomBytes } from 'crypto';
+import { randomBytes } from "crypto";
 
 /**
  * Character set for password generation (excludes ambiguous characters)
  */
-const PASSWORD_CHARSET = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*';
+const PASSWORD_CHARSET =
+  "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*";
 
 /**
  * Minimum password length
@@ -28,15 +29,19 @@ const DEFAULT_PASSWORD_LENGTH = 32;
  * @returns Generated password
  * @throws Error if length is less than minimum (16 characters)
  */
-export function generatePassword(length: number = DEFAULT_PASSWORD_LENGTH): string {
+export function generatePassword(
+  length: number = DEFAULT_PASSWORD_LENGTH
+): string {
   if (length < MIN_PASSWORD_LENGTH) {
-    throw new Error(`Password length must be at least ${MIN_PASSWORD_LENGTH} characters`);
+    throw new Error(
+      `Password length must be at least ${MIN_PASSWORD_LENGTH} characters`
+    );
   }
 
   const randomValues = randomBytes(length);
   const password = Array.from(randomValues)
     .map((byte) => PASSWORD_CHARSET[byte % PASSWORD_CHARSET.length])
-    .join('');
+    .join("");
 
   return password;
 }
@@ -71,25 +76,38 @@ export function encodePasswordForURI(password: string): string {
 }
 
 /**
- * Generates credentials for a MongoDB instance
- *
- * @returns Object containing root and app user passwords
+ * Database credentials (used by both MongoDB and PostgreSQL)
  */
-export interface MongoDBCredentials {
-  /** Root user password */
+export interface DatabaseCredentials {
+  /** Root/admin user password */
   rootPassword: string;
   /** Application user password */
   appPassword: string;
 }
 
 /**
- * Generates a complete set of credentials for a MongoDB instance
- *
- * @returns MongoDB credentials with root and app passwords
+ * @deprecated Use DatabaseCredentials instead
  */
-export function generateMongoDBCredentials(): MongoDBCredentials {
+export type MongoDBCredentials = DatabaseCredentials;
+
+/**
+ * Generates a complete set of credentials for a database instance
+ *
+ * @returns Database credentials with root and app passwords
+ */
+export function generateDatabaseCredentials(): DatabaseCredentials {
   return {
     rootPassword: generatePassword(),
     appPassword: generatePassword(),
   };
+}
+
+/**
+ * Generates a complete set of credentials for a MongoDB instance
+ *
+ * @returns MongoDB credentials with root and app passwords
+ * @deprecated Use generateDatabaseCredentials instead
+ */
+export function generateMongoDBCredentials(): DatabaseCredentials {
+  return generateDatabaseCredentials();
 }
