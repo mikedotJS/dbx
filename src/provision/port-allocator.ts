@@ -4,7 +4,7 @@
  * Allocates unique ports starting from basePort, detecting conflicts with existing instances.
  */
 
-import type { DbxState } from '../state/schema.js';
+import type { DbxState } from "../state/schema.js";
 
 /**
  * Minimum valid port number
@@ -27,7 +27,7 @@ const HIGH_PORT_WARNING = 65500;
 export class PortAllocationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'PortAllocationError';
+    this.name = "PortAllocationError";
   }
 }
 
@@ -78,14 +78,27 @@ export function getUsedPortsFromLocalState(localState: DbxState): Set<number> {
  *
  * @param localState - Local state object
  * @param remoteState - Remote state object (optional)
+ * @param dockerPorts - Ports from running Docker containers (optional)
  * @returns Set of all used port numbers
  */
-export function getAllUsedPorts(localState: DbxState, remoteState?: DbxState): Set<number> {
+export function getAllUsedPorts(
+  localState: DbxState,
+  remoteState?: DbxState,
+  dockerPorts?: Set<number>
+): Set<number> {
   const ports = getUsedPortsFromLocalState(localState);
 
   if (remoteState) {
     for (const instance of Object.values(remoteState.instances)) {
       ports.add(instance.port);
+    }
+  }
+
+  // Include ports from running Docker containers
+  // This handles cases where state files are out of sync with actual containers
+  if (dockerPorts) {
+    for (const port of dockerPorts) {
+      ports.add(port);
     }
   }
 
@@ -101,19 +114,21 @@ export function getAllUsedPorts(localState: DbxState, remoteState?: DbxState): S
  * @param localState - Local state object
  * @param basePort - Starting port for allocation
  * @param remoteState - Remote state object (optional)
+ * @param dockerPorts - Ports from running Docker containers (optional)
  * @returns Next available port number
  * @throws PortAllocationError if no ports available in valid range
  */
 export function findNextPort(
   localState: DbxState,
   basePort: number,
-  remoteState?: DbxState
+  remoteState?: DbxState,
+  dockerPorts?: Set<number>
 ): number {
   // Validate base port
   validatePort(basePort);
 
-  // Get all used ports from both local and remote state
-  const usedPorts = getAllUsedPorts(localState, remoteState);
+  // Get all used ports from local state, remote state, and running Docker containers
+  const usedPorts = getAllUsedPorts(localState, remoteState, dockerPorts);
 
   // Find next available port sequentially
   let port = basePort;
@@ -125,7 +140,11 @@ export function findNextPort(
 
       // Log allocation decision
       console.log(
-        `Allocated port: ${port} (basePort: ${basePort}, existing ports: ${Array.from(usedPorts).sort((a, b) => a - b).join(', ') || 'none'})`
+        `Allocated port: ${port} (basePort: ${basePort}, existing ports: ${
+          Array.from(usedPorts)
+            .sort((a, b) => a - b)
+            .join(", ") || "none"
+        })`
       );
 
       return port;

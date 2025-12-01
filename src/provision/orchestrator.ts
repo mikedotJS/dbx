@@ -8,7 +8,11 @@ import type { InstanceMetadata } from "../state/schema.js";
 import type { DbxConfig, DatabaseEngine } from "../config/schema.js";
 import { getDatabaseEngine } from "../config/schema.js";
 import { SSHClient } from "../ssh/client.js";
-import { ensureDockerReady } from "../ssh/docker.js";
+import {
+  ensureDockerReady,
+  cleanupStaleContainer,
+  getDbxContainerPorts,
+} from "../ssh/docker.js";
 import { loadConfig } from "../config/loader.js";
 import { getInstance, setInstance, readState } from "../state/manager.js";
 import { readRemoteState, writeRemoteState } from "../state/remote.js";
@@ -185,7 +189,11 @@ export async function provisionInstance(
     const localState = await readState(options.cwd);
     const remoteState = await readRemoteState(sshClient);
     const basePort = getBasePort(config);
-    const port = findNextPort(localState, basePort, remoteState);
+
+    // Get ports from running Docker containers to detect conflicts
+    // even when state files are out of sync
+    const dockerPorts = await getDbxContainerPorts(sshClient);
+    const port = findNextPort(localState, basePort, remoteState, dockerPorts);
 
     // Step 5: Generate credentials
     console.log("\nStep 5/11: Generating credentials...");
@@ -232,6 +240,13 @@ export async function provisionInstance(
     console.log(`\nStep 8/11: Starting ${engineName} container...`);
     const containerName = `dbx_${config.project}_${options.env}`;
     const dbName = `${config.project}_${options.env}`;
+
+    // Clean up any stale containers from failed previous attempts
+    // This prevents port conflicts from ghost bindings held by "Created" status containers
+    const staleRemoved = await cleanupStaleContainer(sshClient, containerName);
+    if (staleRemoved > 0) {
+      console.log(`✓ Cleaned up ${staleRemoved} stale container(s)`);
+    }
 
     try {
       if (engine === "postgresql") {
