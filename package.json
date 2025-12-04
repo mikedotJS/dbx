@@ -1,6 +1,6 @@
 {
   "name": "@weirdscience/dbx",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "CLI tool for provisioning MongoDB instances on remote VPS infrastructure",
   "type": "module",
   "main": "dist/index.js",
