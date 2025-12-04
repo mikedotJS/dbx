@@ -1,14 +1,31 @@
-# Exclude development artifacts and AI helper files from the npm package
+# Source (dist is published, not src)
+src/
+
+# Tests
+*.test.ts
+vitest.config.ts
+
+# Config
+tsconfig.json
+.dbx/
+
+# Dev artifacts
 node_modules/
 coverage/
 .vscode/
 .idea/
 *.log
 npm-debug.log*
+
+# OS
 .DS_Store
 Thumbs.db
+
+# AI helper files
 .claude/
 AGENTS.md
 CLAUDE.md
 openspec/
-.dbx/
+
+# Docs (README is included by default)
+CONTRIBUTING.md
