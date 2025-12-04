@@ -14,13 +14,31 @@
   },
   "keywords": [
     "mongodb",
+    "postgresql",
     "vps",
     "docker",
     "cli",
-    "database"
+    "database",
+    "devops",
+    "ssh",
+    "provisioning",
+    "deployment",
+    "self-hosted",
+    "infrastructure",
+    "container",
+    "backup",
+    "restore"
   ],
-  "author": "",
+  "author": "mikedotJS",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mikedotJS/dbx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mikedotJS/dbx/issues"
+  },
+  "homepage": "https://github.com/mikedotJS/dbx#readme",
   "dependencies": {
     "ssh2": "^1.15.0",
     "commander": "^12.0.0"

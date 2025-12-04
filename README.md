@@ -1,5 +1,9 @@
 # dbx
 
+[![npm version](https://img.shields.io/npm/v/@weirdscience/dbx)](https://www.npmjs.com/package/@weirdscience/dbx)
+[![license](https://img.shields.io/npm/l/@weirdscience/dbx)](https://github.com/mikedotJS/dbx/blob/main/LICENSE)
+[![downloads](https://img.shields.io/npm/dm/@weirdscience/dbx)](https://www.npmjs.com/package/@weirdscience/dbx)
+
 A CLI tool for provisioning database instances (MongoDB or PostgreSQL) on remote VPS infrastructure via SSH and Docker.
 
 ## Overview
