@@ -13,7 +13,9 @@
     "clean": "rm -rf dist",
     "test": "vitest run",
     "test:watch": "vitest",
-    "release": "npm version patch && git push && git push --tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes"
+    "release": "npm version patch && git push && git push --tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:minor": "npm version minor && git push && git push --tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:major": "npm version major && git push && git push --tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes"
   },
   "keywords": [
     "mongodb",
