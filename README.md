@@ -1,5 +1,7 @@
 # dbx
 
+> **Self-hosted database provisioning CLI** — Deploy MongoDB or PostgreSQL on any VPS with a single command. No Kubernetes, no cloud lock-in.
+
 [![CI](https://github.com/mikedotJS/dbx/actions/workflows/ci.yml/badge.svg)](https://github.com/mikedotJS/dbx/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@weirdscience/dbx)](https://www.npmjs.com/package/@weirdscience/dbx)
 [![license](https://img.shields.io/npm/l/@weirdscience/dbx)](https://github.com/mikedotJS/dbx/blob/main/LICENSE)

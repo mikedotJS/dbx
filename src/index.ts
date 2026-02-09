@@ -9,6 +9,7 @@ import { registerInitCommand } from './commands/init.js';
 import { registerUpCommand } from './commands/up.js';
 import { registerListCommand } from './commands/list.js';
 import { registerLogsCommand } from './commands/logs.js';
+import { registerShellCommand } from './commands/shell.js';
 import { registerSyncCommand } from './commands/sync.js';
 import { registerUrlCommand } from './commands/url.js';
 import { registerBackupCommand } from './commands/backup.js';
@@ -30,6 +31,7 @@ program
 registerInitCommand(program);
 registerListCommand(program);
 registerLogsCommand(program);
+registerShellCommand(program);
 registerSyncCommand(program);
 registerUpCommand(program);
 registerUrlCommand(program);
