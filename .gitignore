@@ -29,3 +29,9 @@ coverage/
 AGENTS.md
 CLAUDE.md
 openspec/
+.env
+.env.*
+*.pem
+*.p12
+!.env.example
+node_modules
